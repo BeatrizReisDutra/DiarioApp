@@ -1,7 +1,6 @@
 # Miscellaneous
 *.class
-*.log
-*.swp
+*.log*.swp
 .DS_Store
 *.iml
 *.ipr
