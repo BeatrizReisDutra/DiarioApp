@@ -1,64 +1,91 @@
 import 'package:flutter/material.dart';
 
-import 'main.dart'; // Importa as cores e temas globais
+// --- Dados de Exemplo ---
+class Aula {
+  final String titulo;
+  final String horario;
+  final Color corBorda;
 
-// As cores (primaryColor, backgroundDark, etc.) são definidas em main.dart
-
-// Cores para as Barras Laterais dos Eventos
-const Color borderYellow = Color(0xFFFBBC05); // Amarelo
-const Color borderGreen = Color(0xFF34A853);  // Verde
-const Color borderRed = Color(0xFFEA4335);    // Vermelho
-const Color borderPurple = Color(0xFF9333ea);  // Roxo
-
-// Estrutura de Dados para os Eventos
-class CalendarEvent {
-  final String dayName;
-  final String dayNumber;
-  final List<EventDetail> details;
-
-  CalendarEvent(this.dayName, this.dayNumber, this.details);
+  Aula(this.titulo, this.horario, this.corBorda);
 }
 
-class EventDetail {
-  final String title;
-  final String time;
-  final Color borderColor;
+class DiaAgenda {
+  final String diaSemana;
+  final int diaMes;
+  final List<Aula> aulas;
+  final bool isHoje;
 
-  EventDetail(this.title, this.time, this.borderColor);
+  DiaAgenda(this.diaSemana, this.diaMes, this.aulas, {this.isHoje = false});
 }
 
-// Dados de Exemplo (Simulando a semana de 14 a 18 de Outubro)
-final List<CalendarEvent> mockEvents = [
-  CalendarEvent('SEG', '14', [
-    EventDetail('Matemática - 9º Ano A', '08:00 - 09:40', borderYellow),
-    EventDetail('Física - 2º Ano B', '10:00 - 11:40', borderGreen),
+final List<DiaAgenda> agendaSemanal = [
+  DiaAgenda('SEG', 14, [
+    Aula('Matemática - 9º Ano A', '08:00 - 09:40', Colors.yellow.shade400),
+    Aula('Física - 2º Ano B', '10:00 - 11:40', Colors.green.shade400),
+  ], isHoje: true),
+  DiaAgenda('TER', 15, [
+    Aula('Lembrete: Reunião Pedagógica', '14:00', Colors.red.shade400),
   ]),
-  CalendarEvent('TER', '15', [
-    EventDetail('Lembrete: Reunião Pedagógica', '14:00', borderRed),
+  DiaAgenda('QUA', 16, [
+    Aula('Matemática - 9º Ano A', '08:00 - 09:40', Colors.yellow.shade400),
   ]),
-  CalendarEvent('QUA', '16', [
-    EventDetail('Matemática - 9º Ano A', '08:00 - 09:40', borderYellow),
+  DiaAgenda('QUI', 17, [
+    Aula('Matemática - 1º Ano C', '10:00 - 11:40', Colors.purple.shade400),
   ]),
-  CalendarEvent('QUI', '17', [
-    EventDetail('Matemática - 1º Ano C', '10:00 - 11:40', borderPurple),
-  ]),
-  CalendarEvent('SEX', '18', [
-    EventDetail('Física - 2º Ano B', '08:00 - 09:40', borderGreen),
+  DiaAgenda('SEX', 18, [
+    Aula('Física - 2º Ano B', '08:00 - 09:40', Colors.green.shade400),
   ]),
 ];
 
-enum CalendarView { day, week, month }
+// --- Tema e Cores ---
+const Color primaryColor = Color(0xFF4f80ff);
+const Color backgroundDark = Color(0xFF121212);
+const Color cardDark = Color(0xFF1e1e1e);
+const Color textColor = Colors.white;
 
-class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+final ThemeData darkTheme = ThemeData(
+  brightness: Brightness.dark,
+  scaffoldBackgroundColor: backgroundDark,
+  colorScheme: const ColorScheme.dark(
+    primary: primaryColor,
+    background: backgroundDark,
+    surface: cardDark,
+    onBackground: textColor,
+    onSurface: textColor,
+  ),
+  fontFamily: 'Lexend', // Assumindo que a fonte 'Lexend' está configurada no projeto
+  appBarTheme: const AppBarTheme(
+    backgroundColor: backgroundDark,
+    foregroundColor: textColor,
+    elevation: 0,
+    titleTextStyle: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+      color: textColor,
+    ),
+  ),
+  textTheme: Typography.whiteMountainView.copyWith(
+    bodyMedium: const TextStyle(color: textColor),
+    titleMedium: const TextStyle(color: textColor),
+  ),
+  // ... outros ajustes de tema
+);
+
+class CalendarioApp extends StatelessWidget {
+  const CalendarioApp({super.key});
 
   @override
-  State<CalendarScreen> createState() => _CalendarScreenState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Calendário de Aulas',
+      theme: darkTheme,
+      home: const CalendarioScreen(),
+    );
+  }
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
-  // Estado para controlar a visualização (Dia, Semana, Mês)
-  CalendarView _currentView = CalendarView.week;
+class CalendarioScreen extends StatelessWidget {
+  const CalendarioScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -66,212 +93,166 @@ class _CalendarScreenState extends State<CalendarScreen> {
       appBar: _buildAppBar(),
       body: Column(
         children: [
-          // Controle de Navegação do Calendário (Mês, Dia/Semana/Mês)
-          _buildCalendarControls(),
-          // Lista de Eventos (a parte rolável)
+          _buildMonthSelector(context),
           Expanded(
-            child: _buildEventList(),
+            child: _buildAgendaList(),
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(context),
+      bottomNavigationBar: _buildBottomNavBar(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
-  // --- 1. AppBar ---
+  // --- Componentes da Tela ---
 
-  PreferredSizeWidget _buildAppBar() {
+  AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: backgroundDark,
-      automaticallyImplyLeading: false, // Remove a seta de voltar padrão
-      elevation: 0,
-      title: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: textDarkSecondary),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const Text('Calendário de Aulas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textDarkPrimary)),
-        ],
-      ),
+      title: const Text('Calendário de Aulas'),
       actions: [
         IconButton(
-          icon: const Icon(Icons.search, color: textDarkPrimary),
-          onPressed: () {
-            print('Pesquisar pressionado');
-          },
+          icon: const Icon(Icons.search, size: 24),
+          onPressed: () {},
         ),
-        Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: primaryColor,
-              borderRadius: BorderRadius.circular(8.0),
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          child: IconButton(
+            style: IconButton.styleFrom(
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: EdgeInsets.zero,
             ),
-            child: IconButton(
-              icon: const Icon(Icons.add, color: Colors.white),
-              onPressed: () {
-                print('Adicionar Evento pressionado');
-              },
-            ),
+            icon: const Icon(Icons.add, color: Colors.white, size: 24),
+            onPressed: () {},
           ),
         ),
       ],
     );
   }
 
-  // --- 2. Controles do Calendário (Mês e View) ---
-
-  Widget _buildCalendarControls() {
+  Widget _buildMonthSelector(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Column(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Botões de Mês e Título
-              Row(
-                children: [
-                  _buildChevronButton(Icons.chevron_left, () => print('Mês anterior')),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Outubro 2024',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: textDarkPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildChevronButton(Icons.chevron_right, () => print('Próximo mês')),
-                ],
-              ),
-              // Toggle Dia/Semana/Mês
-              Container(
-                decoration: BoxDecoration(
-                  color: cardDark,
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                padding: const EdgeInsets.all(4.0),
-                child: Row(
-                  children: [
-                    _buildToggleItem('Dia', _currentView == CalendarView.day, () {
-                      setState(() => _currentView = CalendarView.day);
-                    }),
-                    _buildToggleItem('Semana', _currentView == CalendarView.week, () {
-                      setState(() => _currentView = CalendarView.week);
-                    }),
-                    _buildToggleItem('Mês', _currentView == CalendarView.month, () {
-                      setState(() => _currentView = CalendarView.month);
-                    }),
-                  ],
+              _buildMonthNavButton(Icons.chevron_left),
+              const SizedBox(width: 8),
+              const Text(
+                'Outubro 2024',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white, // No original é gray-50, mas usei branco para contraste em dark mode puro
                 ),
               ),
+              const SizedBox(width: 8),
+              _buildMonthNavButton(Icons.chevron_right),
             ],
           ),
-          const Divider(color: Colors.transparent, height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: cardDark,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.all(4.0),
+            child: Row(
+              children: [
+                _buildViewButton('Dia', false),
+                _buildViewButton('Semana', true),
+                _buildViewButton('Mês', false),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildChevronButton(IconData icon, VoidCallback onTap) {
+  Widget _buildMonthNavButton(IconData icon) {
     return Container(
       width: 32,
       height: 32,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: cardDark,
-        borderRadius: BorderRadius.circular(16.0),
+        shape: BoxShape.circle,
       ),
-      child: IconButton(
-        icon: Icon(icon, color: textDarkSecondary, size: 20),
-        padding: EdgeInsets.zero,
-        onPressed: onTap,
-      ),
+      child: Icon(icon, size: 20, color: Colors.grey.shade300),
     );
   }
 
-  Widget _buildToggleItem(String text, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(6.0),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.white : textDarkSecondary,
-          ),
+  Widget _buildViewButton(String text, bool isSelected) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? primaryColor : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          color: isSelected ? Colors.white : Colors.grey.shade400,
         ),
       ),
     );
   }
 
-  // --- 3. Lista de Eventos ---
-
-  Widget _buildEventList() {
+  Widget _buildAgendaList() {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      itemCount: mockEvents.length,
+      itemCount: agendaSemanal.length,
       itemBuilder: (context, index) {
-        final eventGroup = mockEvents[index];
+        final dia = agendaSemanal[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 24.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Coluna do Dia
-              Container(
-                width: 48,
-                margin: const EdgeInsets.only(right: 16.0),
+              // Coluna do dia da semana e dia do mês
+              SizedBox(
+                width: 48, // w-12 flex-shrink-0
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      eventGroup.dayName,
-                      style: const TextStyle(
+                      dia.diaSemana,
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: textDarkSecondary,
+                        color: Colors.grey.shade400,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      width: 32,
                       height: 32,
-                      alignment: Alignment.center,
+                      width: 32,
                       decoration: BoxDecoration(
-                        color: eventGroup.dayNumber == '14' ? primaryColor : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16.0),
+                        color: dia.isHoje ? primaryColor : Colors.transparent,
+                        shape: BoxShape.circle,
                       ),
+                      alignment: Alignment.center,
                       child: Text(
-                        eventGroup.dayNumber,
+                        '${dia.diaMes}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: eventGroup.dayNumber == '14' ? Colors.white : textDarkSecondary,
+                          color: dia.isHoje ? Colors.white : Colors.grey.shade300,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              // Lista de Aulas/Eventos do Dia
+              const SizedBox(width: 16),
+              // Coluna de Aulas/Eventos
               Expanded(
                 child: Column(
-                  children: eventGroup.details.map((detail) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: _buildEventCard(detail),
-                    );
-                  }).toList(),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: dia.aulas.map((aula) => _buildAulaCard(aula)).toList(),
                 ),
               ),
             ],
@@ -281,96 +262,88 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildEventCard(EventDetail detail) {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: cardDark,
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border(
-          left: BorderSide(
-            color: detail.borderColor,
-            width: 4.0, // Largura da barra lateral
+  Widget _buildAulaCard(Aula aula) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardDark,
+          borderRadius: BorderRadius.circular(8),
+          border: Border(
+            left: BorderSide(
+              color: aula.corBorda,
+              width: 4.0, // border-l-4
+            ),
           ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            detail.title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: textDarkPrimary,
-              fontSize: 16,
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              aula.titulo,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            detail.time,
-            style: const TextStyle(
-              color: textDarkSecondary,
-              fontSize: 14,
+            const SizedBox(height: 2),
+            Text(
+              aula.horario,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade400,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // --- 4. BottomNavigationBar ---
-
-  Widget _buildBottomNavigationBar(BuildContext context) {
-    const int currentIndex = 2; // Calendário é o terceiro item (índice 2)
-
+  Widget _buildBottomNavBar() {
     return Container(
       decoration: BoxDecoration(
+        color: backgroundDark.withOpacity(0.9), // Simula o backdrop-blur
         border: Border(top: BorderSide(color: Colors.grey.shade800)),
-        color: backgroundDark.withOpacity(0.9),
       ),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushReplacementNamed(context, '/home');
-              break;
-            case 1:
-              Navigator.pushReplacementNamed(context, '/turmas');
-              break;
-            case 2:
-              // Já está na tela Calendário
-              break;
-            case 3:
-              Navigator.pushReplacementNamed(context, '/relatorio_notas'); // Ou a tela de relatórios principal
-              break;
-          }
-        },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: primaryColor,
-        unselectedItemColor: textDarkSecondary,
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Início',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.groups_outlined),
-            label: 'Turmas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
-            label: 'Calendário',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assessment_outlined),
-            label: 'Relatórios',
-          ),
-        ],
+      child: SafeArea(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Icons.home, 'Início', false),
+            _buildNavItem(Icons.group, 'Turmas', false),
+            _buildNavItem(Icons.calendar_month, 'Calendário', true),
+            _buildNavItem(Icons.assessment, 'Relatórios', false),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, bool isSelected) {
+    final color = isSelected ? primaryColor : Colors.grey.shade400;
+    return InkWell(
+      onTap: () {
+        // Ação de navegação
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -107,11 +107,13 @@ class HomeScreen extends StatelessWidget {
               // Já está na Home, não faz nada
               break;
             case 1: // Turmas
+              Navigator.pushNamed(context, '/turmas');
+              break;
             case 2: // Calendário
               Navigator.pushNamed(context, '/calendario');
               break;
             case 3: // Relatórios
-              Navigator.pushNamed(context, '/relatorio_notas');
+              Navigator.pushNamed(context, '/relatorios');
               break;
           }
         },

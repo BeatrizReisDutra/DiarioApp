@@ -68,7 +68,7 @@ class ReportsScreen extends StatelessWidget {
       data: darkTheme,
       child: Scaffold(
         appBar: _buildAppBar(),
-        body: _buildReportList(),
+        body: _buildReportList(context),
         bottomNavigationBar: _buildBottomNavigationBar(context),
       ),
     );
@@ -107,23 +107,23 @@ class ReportsScreen extends StatelessWidget {
 
   // --- 2. Lista de Relatórios (Body) ---
 
-  Widget _buildReportList() {
+  Widget _buildReportList(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
       child: Column(
         children: mockReports.map((report) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
-            child: _buildReportCard(report),
+            child: _buildReportCard(context, report),
           );
         }).toList(),
       ),
     );
   }
 
-  Widget _buildReportCard(ReportItem report) {
+  Widget _buildReportCard(BuildContext context, ReportItem report) {
     return GestureDetector(
-      onTap: () => print('${report.title} pressionado. Rota: ${report.route}'),
+      onTap: () => Navigator.pushNamed(context, report.route),
       child: Container(
         height: 96,
         padding: const EdgeInsets.all(16.0),
