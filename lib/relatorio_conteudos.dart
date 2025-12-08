@@ -18,6 +18,7 @@ class ContentEntry {
   final String title;
   final String description;
   final String discipline;
+  final String className; // Novo campo para a turma
 
   const ContentEntry({
     required this.dateDay,
@@ -25,35 +26,41 @@ class ContentEntry {
     required this.title,
     required this.description,
     required this.discipline,
+    required this.className,
   });
 }
 
+// Lista de dados mockados que agora será mutável e acessível globalmente.
+// Em um app real, isso viria de um banco de dados ou de um gerenciador de estado.
+final List<ContentEntry> contentData = <ContentEntry>[
+  ContentEntry(
+    dateDay: '25',
+    dateMonth: 'AGO',
+    title: 'Álgebra: Resolução de equações de 2º grau',
+    description: 'Introdução à fórmula de Bhaskara e exercícios práticos em sala. Discussão sobre as raízes reais e complexas.',
+    discipline: 'Matemática',
+    className: '9º Ano A',
+  ),
+  ContentEntry(
+    dateDay: '23',
+    dateMonth: 'AGO',
+    title: 'Geometria: Teorema de Pitágoras',
+    description: 'Aplicação do teorema em problemas práticos e demonstração geométrica. Atividades em duplas.',
+    discipline: 'Matemática',
+    className: '9º Ano A',
+  ),
+  ContentEntry(
+    dateDay: '21',
+    dateMonth: 'AGO',
+    title: 'Trigonometria no triângulo retângulo',
+    description: 'Definição de seno, cosseno e tangente. Resolução de exercícios com ângulos notáveis.',
+    discipline: 'Matemática',
+    className: '9º Ano A',
+  ),
+];
+
 class ContentReportScreen extends StatelessWidget {
   const ContentReportScreen({super.key});
-
-  static const List<ContentEntry> contentData = <ContentEntry>[
-    ContentEntry(
-      dateDay: '25',
-      dateMonth: 'AGO',
-      title: 'Álgebra: Resolução de equações de 2º grau',
-      description: 'Introdução à fórmula de Bhaskara e exercícios práticos em sala. Discussão sobre as raízes reais e complexas.',
-      discipline: 'Matemática',
-    ),
-    ContentEntry(
-      dateDay: '23',
-      dateMonth: 'AGO',
-      title: 'Geometria: Teorema de Pitágoras',
-      description: 'Aplicação do teorema em problemas práticos e demonstração geométrica. Atividades em duplas.',
-      discipline: 'Matemática',
-    ),
-    ContentEntry(
-      dateDay: '21',
-      dateMonth: 'AGO',
-      title: 'Trigonometria no triângulo retângulo',
-      description: 'Definição de seno, cosseno e tangente. Resolução de exercícios com ângulos notáveis.',
-      discipline: 'Matemática',
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {

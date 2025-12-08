@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:diarioapp/relatorio_conteudos.dart'; // Importar para acessar a lista e o modelo
+import 'package:diarioapp/dados_frequencia.dart'; // Importar dados de frequência
 
 // --- Dados Mockados (Simulando informações) ---
 enum AttendanceStatus { present, absent, notSelected }
@@ -10,14 +12,30 @@ class Student {
   Student({required this.name, required this.status});
 }
 
-final List<Student> mockStudents = [
-  Student(name: 'Ana Júlia Oliveira', status: AttendanceStatus.notSelected),
-  Student(name: 'Bruno Costa', status: AttendanceStatus.notSelected),
-  Student(name: 'Carlos Eduardo Pereira', status: AttendanceStatus.notSelected),
-  Student(name: 'Daniela Martins', status: AttendanceStatus.notSelected),
-];
+// Mapeamento de alunos por turma para simular um banco de dados
+final Map<String, List<String>> studentsByClass = {
+  '9º Ano A': [
+    'Ana Júlia Oliveira',
+    'Bruno Costa',
+    'Carlos Eduardo Pereira',
+    'Daniela Martins',
+  ],
+  '9º Ano B': [
+    'Eduardo Lima',
+    'Fernanda Alves',
+    'Gustavo Ribeiro',
+    'Helena Souza',
+  ],
+  '1º Ano C': [
+    'Igor Santos',
+    'Joana Ferreira',
+    'Lucas Almeida',
+    'Mariana Barbosa',
+  ],
+};
 
-// --- Tema e Cores (Adaptando do HTML/CSS) ---
+
+
 const Color primaryColor = Color(0xFF137fec);
 const Color backgroundColorDark = Color(0xFF101922);
 const Color slate800 = Color(0xFF1e293b); // Cor similar ao bg do card
@@ -36,34 +54,10 @@ class ClassAttendanceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: backgroundColorDark,
-        brightness: Brightness.dark,
-        fontFamily: 'Lexend', // Assumindo que a fonte 'Lexend' está configurada ou usando a padrão
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(color: Color(0xFF334155)), // slate-700
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(color: Color(0xFF334155)), // slate-700
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(color: primaryColor),
-          ),
-          fillColor: slate900_50,
-          filled: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          labelStyle: const TextStyle(color: textSlate400),
-          hintStyle: const TextStyle(color: Color(0xFF64748b)), // placeholder slate-500
-        ),
-      ),
-      home: const ClassDetailView(),
-    );
+    // O MaterialApp foi removido. Agora esta tela herda o tema e a navegação
+    // do MaterialApp principal definido em 'main.dart'.
+    // Isso permite que o Navigator.pop(context) funcione corretamente.
+    return const ClassDetailView();
   }
 }
 
@@ -76,11 +70,104 @@ class ClassDetailView extends StatefulWidget {
 
 class _ClassDetailViewState extends State<ClassDetailView> {
   late List<Student> _students;
+  
+  // Controladores para os campos de texto
+  final _topicController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
+  // Variáveis para guardar o estado dos filtros
+  String? _selectedClass;
+  String? _selectedSubject;
+  DateTime? _selectedDate;
 
   @override
   void initState() {
     super.initState();
-    _students = List<Student>.from(mockStudents.map((s) => Student(name: s.name, status: s.status)));
+    _students = []; // Começa com a lista de alunos vazia
+  }
+  
+  @override
+  void dispose() {
+    // Limpar os controladores quando o widget for descartado
+    _topicController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  void _saveContent() {
+    // 1. Validar se todos os campos foram preenchidos
+    if (_selectedClass == null || _selectedSubject == null || _selectedDate == null) {
+      _showErrorSnackBar('Por favor, selecione turma, disciplina e dia.');
+      return;
+    }
+    if (_topicController.text.isEmpty || _descriptionController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Por favor, preencha o tópico e a descrição da aula.'),
+        ),
+      );
+      return;
+    }
+
+    // --- Lógica para salvar a Frequência ---
+    final String currentDate = '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}';
+
+    // Adiciona a nova data à lista de datas registradas, se ainda não existir.
+    if (!registeredDates.contains(currentDate)) {
+      registeredDates.add(currentDate);
+      registeredDates.sort(); // Mantém as datas ordenadas
+    }
+
+    // Atualiza o registro de cada aluno
+    for (var studentState in _students) {
+      // Encontra o aluno correspondente no "banco de dados"
+      final studentDb = allStudentsAttendance.firstWhere((s) => s.name == studentState.name);
+
+      // Remove qualquer registro antigo para esta data para evitar duplicatas
+      studentDb.records.removeWhere((rec) => rec.date == currentDate);
+
+      // Adiciona o novo registro se o status não for "não selecionado"
+      if (studentState.status != AttendanceStatus.notSelected) {
+        final newStatus = studentState.status == AttendanceStatus.present ? 'P' : 'F';
+        studentDb.records.add(AttendanceRecord(currentDate, newStatus));
+        // Ordena os registros do aluno por data
+        studentDb.records.sort((a, b) => a.date.compareTo(b.date));
+      }
+    }
+    // --- Fim da lógica de Frequência ---
+
+    // 2. Criar o novo registro de conteúdo
+    final newEntry = ContentEntry(
+      dateDay: _selectedDate!.day.toString(),
+      dateMonth: _getMonthAbbreviation(_selectedDate!.month),
+      title: _topicController.text,
+      description: _descriptionController.text,
+      discipline: _selectedSubject!,
+      className: _selectedClass!,
+    );
+
+    // 3. Adicionar conteúdo à lista global
+    setState(() {
+      contentData.insert(0, newEntry);
+    });
+
+    // 4. Exibir mensagem de sucesso e permanecer na tela
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Colors.green,
+        content: Text('Conteúdo e Frequência salvos com sucesso!'),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.red,
+        content: Text(message),
+      ),
+    );
   }
 
   Widget build(BuildContext context) {
@@ -93,7 +180,7 @@ class _ClassDetailViewState extends State<ClassDetailView> {
           icon: const Icon(Icons.arrow_back, color: Color(0xFFcbd5e1)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Column(
+        title: Column(
           children: [
             Text(
               'Conteúdo da Aula',
@@ -101,7 +188,9 @@ class _ClassDetailViewState extends State<ClassDetailView> {
                   fontSize: 18, fontWeight: FontWeight.bold, color: textSlate50),
             ),
             Text(
-              '25 de Julho de 2024',
+              _selectedDate != null
+                  ? '${_selectedDate!.day} de ${_getMonthName(_selectedDate!.month)} de ${_selectedDate!.year}'
+                  : 'Selecione uma data',
               style: TextStyle(fontSize: 12, color: textSlate400),
             ),
           ],
@@ -124,22 +213,24 @@ class _ClassDetailViewState extends State<ClassDetailView> {
             const SizedBox(height: 12),
             _buildFiltersCard(),
             const SizedBox(height: 24),
-
-            // --- Seção de Conteúdo da Aula ---
-            _buildSectionTitle('Conteúdo da Aula'),
-            const SizedBox(height: 12),
-            _buildContentCard(),
-            const SizedBox(height: 24),
-
-            // --- Seção de Frequência ---
-            _buildAttendanceHeader(),
-            const SizedBox(height: 12),
-            ..._students.map((student) => _buildAttendanceRow(student)).toList(),
+            
+            // Mostra o conteúdo e a frequência apenas se uma turma for selecionada
+            if (_selectedClass != null) ...[
+              // --- Seção de Conteúdo da Aula ---
+              _buildSectionTitle('Conteúdo da Aula'),
+              const SizedBox(height: 12),
+              _buildContentCard(),
+              const SizedBox(height: 24),
+              // --- Seção de Frequência ---
+              _buildAttendanceHeader(context),
+              const SizedBox(height: 12),
+              ..._students.map((student) => _buildAttendanceRow(student)).toList(),
+            ]
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: _saveContent,
         backgroundColor: primaryColor,
         shape: const CircleBorder(),
         child: const Icon(Icons.save, size: 30, color: Colors.white),
@@ -147,6 +238,16 @@ class _ClassDetailViewState extends State<ClassDetailView> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: _buildBottomNavigationBar(context),
     );
+  }
+
+  // Atualiza a lista de alunos com base na turma selecionada
+  void _updateStudentList(String className) {
+    final studentNames = studentsByClass[className] ?? [];
+    setState(() {
+      _students = studentNames
+          .map((name) => Student(name: name, status: AttendanceStatus.notSelected))
+          .toList();
+    });
   }
 
   void _updateAttendance(Student student, AttendanceStatus newStatus) {
@@ -166,6 +267,19 @@ class _ClassDetailViewState extends State<ClassDetailView> {
         student.status = AttendanceStatus.present;
       }
     });
+  }
+
+  String _getMonthAbbreviation(int month) {
+    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    return months[month - 1];
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    return months[month - 1];
   }
 
 
@@ -190,20 +304,23 @@ class _ClassDetailViewState extends State<ClassDetailView> {
       ),
       child: Column(
         children: [
-          _buildDropdownFilter('Turma', ['9º Ano A', '9º Ano B', '1º Ano Médio'],
-              '9º Ano A'),
+          _buildDropdownFilter('Turma', 'Selecione a turma', studentsByClass.keys.toList(), _selectedClass, (newValue) {
+            _selectedClass = newValue;
+            _updateStudentList(newValue!);
+          }),
           const SizedBox(height: 16),
-          _buildDropdownFilter('Disciplina', ['Matemática', 'Física', 'Química'],
-              'Matemática'),
+          _buildDropdownFilter('Disciplina', 'Selecione a disciplina', ['Matemática', 'Física', 'Química'], _selectedSubject, (newValue) {
+            setState(() => _selectedSubject = newValue!);
+          }),
           const SizedBox(height: 16),
-          _buildDatePicker('Dia', '25/07/2024'),
+          _buildDatePicker('Dia', _selectedDate != null ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}' : null),
         ],
       ),
     );
   }
 
   Widget _buildDropdownFilter(
-      String label, List<String> items, String initialValue) {
+      String label, String hint, List<String> items, String? value, ValueChanged<String?> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -216,9 +333,10 @@ class _ClassDetailViewState extends State<ClassDetailView> {
                   color: textSlate400)),
         ),
         DropdownButtonFormField<String>(
-          value: initialValue,
+          value: value,
+          hint: Text(hint, style: const TextStyle(color: Color(0xFF64748b))),
           icon: const Icon(Icons.keyboard_arrow_down, color: textSlate400),
-          style: const TextStyle(color: textSlate300, fontSize: 16),
+          style: const TextStyle(color: textSlate300, fontSize: 16, fontFamily: 'Lexend'),
           decoration: const InputDecoration(
             isDense: true,
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -230,15 +348,13 @@ class _ClassDetailViewState extends State<ClassDetailView> {
               child: Text(value),
             );
           }).toList(),
-          onChanged: (String? newValue) {
-            // Lógica para mudar o valor
-          },
+          onChanged: onChanged,
         ),
       ],
     );
   }
 
-  Widget _buildDatePicker(String label, String value) {
+  Widget _buildDatePicker(String label, String? value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -251,15 +367,26 @@ class _ClassDetailViewState extends State<ClassDetailView> {
                   color: textSlate400)),
         ),
         TextFormField(
+          key: ValueKey(value), // Garante que o widget reconstrua com o novo valor
           initialValue: value,
           readOnly: true,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
+            hintText: 'Selecione o dia',
+            hintStyle: const TextStyle(color: Color(0xFF64748b)),
             isDense: true,
             prefixIcon: Icon(Icons.calendar_month, color: textSlate400, size: 24),
             suffixIcon: Icon(Icons.keyboard_arrow_down, color: textSlate400),
           ),
-          onTap: () async {
-            // Lógica para abrir o seletor de data
+          onTap: () async { // Lógica para abrir o seletor de data
+            final DateTime? picked = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate,
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2030),
+            );
+            if (picked != null && picked != _selectedDate) {
+              setState(() => _selectedDate = picked);
+            }
           },
         ),
       ],
@@ -289,7 +416,7 @@ class _ClassDetailViewState extends State<ClassDetailView> {
                     color: textSlate400)),
           ),
           TextFormField(
-            initialValue: 'Conceitos básicos de álgebra',
+            controller: _topicController,
             decoration: const InputDecoration(
               hintText: 'Ex: Equações de 1º Grau',
               isDense: true,
@@ -298,8 +425,7 @@ class _ClassDetailViewState extends State<ClassDetailView> {
           ),
           const SizedBox(height: 16),
           TextFormField(
-            initialValue:
-                'Nesta aula, introduzimos os conceitos básicos de álgebra, incluindo variáveis, expressões e a importância de resolver para o desconhecido. Os alunos participaram de atividades práticas para solidificar o entendimento.',
+            controller: _descriptionController,
             maxLines: 6,
             minLines: 6,
             textAlignVertical: TextAlignVertical.top,
@@ -316,7 +442,7 @@ class _ClassDetailViewState extends State<ClassDetailView> {
     );
   }
 
-  Widget _buildAttendanceHeader() {
+  Widget _buildAttendanceHeader(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -456,7 +582,7 @@ class _ClassDetailViewState extends State<ClassDetailView> {
             label: 'Início',
             isSelected: false,
             onTap: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false),
-          ),
+          ), // TODO: Adicionar navegação para as outras telas
           const _NavBarItem(icon: Icons.school, label: 'Aulas', isSelected: true),
           const _NavBarItem(icon: Icons.checklist, label: 'Frequência', isSelected: false),
           const _NavBarItem(icon: Icons.assessment, label: 'Notas', isSelected: false),

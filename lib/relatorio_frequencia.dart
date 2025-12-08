@@ -1,64 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:diarioapp/dados_frequencia.dart'; // Importa os dados centrais
 
-// --- Dados de Exemplo ---
-class AttendanceRecord {
-  final String date;
-  final String status; // 'P' for Presente, 'F' for Falta
-
-  AttendanceRecord(this.date, this.status);
-}
-
-class Student {
-  final String name;
-  final List<AttendanceRecord> records;
-
-  Student(this.name, this.records);
-}
-
-final List<String> dates = ['01/08', '03/08', '08/08', '10/08', '15/08', '17/08'];
-
-final List<Student> students = [
-  Student('Ana Silva', [
-    AttendanceRecord('01/08', 'P'),
-    AttendanceRecord('03/08', 'P'),
-    AttendanceRecord('08/08', 'F'),
-    AttendanceRecord('10/08', 'P'),
-    AttendanceRecord('15/08', 'P'),
-    AttendanceRecord('17/08', 'P')
-  ]),
-  Student('Bruno Costa', [
-    AttendanceRecord('01/08', 'P'),
-    AttendanceRecord('03/08', 'P'),
-    AttendanceRecord('08/08', 'P'),
-    AttendanceRecord('10/08', 'P'),
-    AttendanceRecord('15/08', 'F'),
-    AttendanceRecord('17/08', 'P')
-  ]),
-  Student('Carla Dias', [
-    AttendanceRecord('01/08', 'F'),
-    AttendanceRecord('03/08', 'F'),
-    AttendanceRecord('08/08', 'P'),
-    AttendanceRecord('10/08', 'P'),
-    AttendanceRecord('15/08', 'P'),
-    AttendanceRecord('17/08', 'P')
-  ]),
-  Student('Daniel Faria', [
-    AttendanceRecord('01/08', 'P'),
-    AttendanceRecord('03/08', 'P'),
-    AttendanceRecord('08/08', 'P'),
-    AttendanceRecord('10/08', 'P'),
-    AttendanceRecord('15/08', 'P'),
-    AttendanceRecord('17/08', 'P')
-  ]),
-  Student('Eduarda Lima', [
-    AttendanceRecord('01/08', 'P'),
-    AttendanceRecord('03/08', 'F'),
-    AttendanceRecord('08/08', 'P'),
-    AttendanceRecord('10/08', 'F'),
-    AttendanceRecord('15/08', 'P'),
-    AttendanceRecord('17/08', 'P')
-  ]),
-];
+// Os dados agora vêm do arquivo 'dados_frequencia.dart'
 
 // --- Configurações de Cores ---
 class AppColors {
@@ -150,7 +93,7 @@ class CustomDropdown extends StatelessWidget {
 // --- Tabela de Frequência ---
 
 class AttendanceTable extends StatelessWidget {
-  final List<Student> students;
+  final List<StudentAttendance> students;
   final List<String> dates;
 
   const AttendanceTable({
@@ -159,8 +102,10 @@ class AttendanceTable extends StatelessWidget {
     super.key,
   });
 
-  Widget _buildStatusCell(String status) {
-    Color color = status == 'P' ? AppColors.green500 : AppColors.red500;
+  Widget _buildStatusCell(String? status) {
+    if (status == null) return const SizedBox.shrink(); // Célula vazia se não houver registro
+
+    Color color = status == 'P' ? AppColors.green500 : AppColors.red500;    
     return Center(
       child: Text(
         status,
@@ -276,11 +221,14 @@ class AttendanceTable extends StatelessWidget {
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
-                          children: student.records.map((record) {
+                          // Mapeia todas as datas do cabeçalho para garantir o alinhamento
+                          children: dates.map((date) {
+                            // Procura o registro do aluno para a data específica
+                            final record = student.records.firstWhere((rec) => rec.date == date, orElse: () => AttendanceRecord(date, ''));
                             return Container(
                               width: 80, // Deve ser a mesma largura do cabeçalho de data
                               padding: const EdgeInsets.all(16.0),
-                              child: _buildStatusCell(record.status),
+                              child: _buildStatusCell(record.status.isEmpty ? null : record.status),
                             );
                           }).toList(),
                         ),
@@ -419,8 +367,8 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: AttendanceTable(
-                  students: students,
-                  dates: dates,
+                  students: allStudentsAttendance, // Usa a lista global
+                  dates: registeredDates, // Usa a lista global
                 ),
               ),
             ),

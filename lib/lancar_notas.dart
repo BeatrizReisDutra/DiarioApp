@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:diarioapp/dados_notas.dart'; // Importar dados de notas
 
 // --- Constantes de Design ---
 const Color primaryColor = Color(0xFF135BEC);
@@ -8,54 +9,6 @@ const Color slate800 = Color(0xFF1E293B); // Para bordas e fundo de inputs
 const Color slate900 = Color(0xFF0F172A); // Fundo dos cards
 const Color slate400 = Color(0xFF94A3B8); // Textos secundários
 const Color textColor = Colors.white;
-
-// --- Modelo de Dados (Simulação) ---
-class StudentGrade {
-  final String name;
-  final double finalAverage;
-  final List<double> bimesterGrades;
-  final String imageUrl;
-
-  StudentGrade({
-    required this.name,
-    required this.finalAverage,
-    required this.bimesterGrades,
-    required this.imageUrl,
-  });
-
-  Color get averageColor {
-    if (finalAverage >= 9.0) return Colors.green.shade500;
-    if (finalAverage >= 7.0) return Colors.yellow.shade500;
-    return Colors.red.shade500;
-  }
-}
-
-final List<StudentGrade> mockGrades = [
-  StudentGrade(
-    name: 'Ana Silva',
-    finalAverage: 8.5,
-    bimesterGrades: [9.0, 8.0, 8.5, 8.5],
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAiV61IuWHDtLGX-V3E-yU3x_9u6JX3uzHwYMKnjXtxrIp3JTWzmC5hPYru9Buhdtm2NqJCRdgAOG7SNRwnMZqc92wg9G5-UDct-ykEpiyS5e6O_PZqRIYAUEOdIO0Ehu6uSaKOYTqJ6-n8-6ut1UG6LOQmIVqYBd9fSLeQa4aJeZoF_iU9aesDtdgJZ22OOzaBHD5uyXcidkRQVNHCKqpL0_SZS1jb9nMoJKMTrOTb6Y3YRzSZLSej-oKJU9zOO1fWT0oGJAkwDw4O',
-  ),
-  StudentGrade(
-    name: 'Bruno Costa',
-    finalAverage: 7.0,
-    bimesterGrades: [6.5, 7.5, 7.0, 7.0],
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBAYn9g6Ka0padii0enElP_ZzXIKuFHfQOqmT0xlFJcGmDg-Jwr1s43k_a-LhwQ2x4G4_As83r3R3Lwbhz1B6ezGVeh3d4YTBc8Nc7cOO9tsN7GAINEiMEZOFUyt4b0rowP8JlG5tnCYFMYfk2HjHqov-n59UAbpmGH1misVKPZmYg_dCzfELsISwYR9s7ljQWBfB8NlA0f9x2IKA0JgN0Ga50KQ38FVu6SB1pUu6nzoCT5u07vB6AT_ic347n-mM2RBiGnFRr3-_sy',
-  ),
-  StudentGrade(
-    name: 'Carla Dias',
-    finalAverage: 9.5,
-    bimesterGrades: [9.5, 9.0, 10.0, 9.5],
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCWjzzc2XG6IKROEoTq0ebvPautDbYm4LdTOnPG6s7PqtbYiw-Tq4tgfRRAl15sXMU89ABjxfwV_7XQCGm-cVp9rEW90oZwwuH2LZsBXiVh2Q-xRcHdHrL2w5hlrBERLfPf6QXXq5arw64H3ry-xvlZ1RdxUPLDqv0E58vCmatRFeA9US5Zqil6uk0lJQfi55oRPSRn9XCcTlc-BoLlQpwwmha8xEpY9RAHzcWbunbJZmNMbRtAjk1GkzBsrZifAXRm22blBLYpAB9j',
-  ),
-  StudentGrade(
-    name: 'Daniel Martins',
-    finalAverage: 5.5,
-    bimesterGrades: [5.0, 6.0, 5.5, 5.5],
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCGOSYCWcBbs7aClDh0TJjZkEqZXZIXFumsctmkuaxD65J_kPoJ56TYi7EGEmIUDAVDJ1j_QfFaf_XNu-wadSrU96Qf7Ci03zmpRckVcwodb-mnKhEhbVYtM3xEDeSgOdRAXnfCXRH7BLwWCukCK31phkgjgXnbutJMIYqTsiefdbPMzDyvw38mnVt8W_vHFmax60rtaRLHFV2MXl1rZD9W9nmCoZdPgjg99rhvRFjz0a-Qnjg5ymdXCfB9LNYKYxwdEZdIbff-tXkr',
-  ),
-];
 
 class GradeEntryApp extends StatelessWidget {
   const GradeEntryApp({super.key});
@@ -96,9 +49,76 @@ class GradeEntryApp extends StatelessWidget {
   }
 }
 
-class GradeEntryScreen extends StatelessWidget {
+class GradeEntryScreen extends StatefulWidget {
   const GradeEntryScreen({super.key});
 
+  @override
+  State<GradeEntryScreen> createState() => _GradeEntryScreenState();
+}
+
+class _GradeEntryScreenState extends State<GradeEntryScreen> {
+  // Mapa para guardar os controladores de cada aluno
+  late Map<String, List<TextEditingController>> _gradeControllers;
+  String _selectedClass = '9º Ano A';
+  String _selectedSubject = 'Matemática';
+
+  @override
+  void initState() {
+    super.initState();
+    _gradeControllers = {};
+    // Inicializa os controladores com os valores do "banco de dados"
+    for (var student in allStudentGrades) {
+      _gradeControllers[student.name] = student.bimesterGrades
+          .map((grade) => TextEditingController(text: grade.toStringAsFixed(1)))
+          .toList();
+    }
+  }
+
+  @override
+  void dispose() {
+    // Limpa todos os controladores para evitar vazamento de memória
+    _gradeControllers.forEach((_, controllers) {
+      for (var controller in controllers) {
+        controller.dispose();
+      }
+    });
+    super.dispose();
+  }
+
+  void _saveGrades() {
+    setState(() {
+      // Itera sobre os alunos e atualiza suas notas no "banco de dados"
+      for (var student in allStudentGrades) {
+        final controllers = _gradeControllers[student.name];
+        if (controllers != null) {
+          // Atualiza a lista de notas do aluno
+          student.bimesterGrades = controllers.map((controller) {
+            // Converte o texto para double, usando 0.0 se for inválido
+            return double.tryParse(controller.text.replaceAll(',', '.')) ?? 0.0;
+          }).toList();
+
+          // Recalcula a média final
+          student.calculateFinalAverage();
+        }
+      }
+    });
+
+    // Exibe uma mensagem de sucesso
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Colors.green,
+        content: Text('Notas salvas com sucesso!'),
+      ),
+    );
+
+    // Opcional: Navegar para o relatório após salvar
+    // Navigator.pushNamed(context, '/relatorio_notas');
+  }
+
+  // TODO: Implementar a lógica de filtro quando houver mais turmas/disciplinas
+  List<StudentGrade> get _filteredStudents {
+    return allStudentGrades.where((s) => s.className == _selectedClass && s.subjectName == _selectedSubject).toList();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -123,7 +143,7 @@ class GradeEntryScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: _saveGrades,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: textColor,
@@ -155,19 +175,25 @@ class GradeEntryScreen extends StatelessWidget {
       body: Column(
         children: [
           // Seção de Turma e Disciplina
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: GradeHeaderSelectors(),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: GradeHeaderSelectors(
+              onClassChanged: (value) => setState(() => _selectedClass = value!),
+              onSubjectChanged: (value) => setState(() => _selectedSubject = value!),
+            ),
           ),
           // Lista de Alunos e Notas
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              itemCount: mockGrades.length,
+              itemCount: allStudentGrades.length, // Usar a lista global
               itemBuilder: (context, index) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
-                  child: StudentGradeCard(student: mockGrades[index]),
+                  child: StudentGradeCard(
+                    student: allStudentGrades[index],
+                    controllers: _gradeControllers[allStudentGrades[index].name]!,
+                  ),
                 );
               },
             ),
@@ -182,8 +208,13 @@ class GradeEntryScreen extends StatelessWidget {
 // --- Componente: Seletores de Turma e Disciplina ---
 
 class GradeHeaderSelectors extends StatelessWidget {
-  const GradeHeaderSelectors({super.key});
-
+  final ValueChanged<String?> onClassChanged;
+  final ValueChanged<String?> onSubjectChanged;
+  const GradeHeaderSelectors({
+    super.key,
+    required this.onClassChanged,
+    required this.onSubjectChanged,
+  });
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -210,7 +241,7 @@ class GradeHeaderSelectors extends StatelessWidget {
                 items: ['3º Ano B', '2º Ano A', '1º Ano C']
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
-                onChanged: (value) {},
+                onChanged: onClassChanged,
                 style: const TextStyle(color: textColor),
               ),
             ],
@@ -239,7 +270,7 @@ class GradeHeaderSelectors extends StatelessWidget {
                 items: ['Matemática', 'Português', 'História']
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
-                onChanged: (value) {},
+                onChanged: onSubjectChanged,
                 style: const TextStyle(color: textColor),
               ),
             ],
@@ -254,7 +285,12 @@ class GradeHeaderSelectors extends StatelessWidget {
 
 class StudentGradeCard extends StatelessWidget {
   final StudentGrade student;
-  const StudentGradeCard({super.key, required this.student});
+  final List<TextEditingController> controllers;
+  const StudentGradeCard({
+    super.key,
+    required this.student,
+    required this.controllers,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +373,7 @@ class StudentGradeCard extends StatelessWidget {
             itemBuilder: (context, index) {
               return GradeInputField(
                 bimester: 'B${index + 1}',
-                initialValue: student.bimesterGrades[index].toStringAsFixed(1),
+                controller: controllers[index],
               );
             },
           ),
@@ -351,11 +387,11 @@ class StudentGradeCard extends StatelessWidget {
 
 class GradeInputField extends StatelessWidget {
   final String bimester;
-  final String initialValue;
+  final TextEditingController controller;
   const GradeInputField({
     super.key,
     required this.bimester,
-    required this.initialValue,
+    required this.controller,
   });
 
   @override
@@ -373,7 +409,7 @@ class GradeInputField extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         TextFormField(
-          initialValue: initialValue,
+          controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           textAlign: TextAlign.center,
           style: const TextStyle(color: textColor, fontSize: 16),
